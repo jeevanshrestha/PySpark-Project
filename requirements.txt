@@ -1,0 +1,12 @@
+pyspark
+scikit-learn
+pandas
+numpy
+pydantic
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary 
+matplotlib
+IPython
+ipykernel

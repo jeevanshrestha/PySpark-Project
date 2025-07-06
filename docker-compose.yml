@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:13-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+  spark-master:
+    image: bitnami/spark:3.4
+    hostname: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_DAEMON_MEMORY=2g
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - SPARK_MASTER_PORT=7077
+      - SPARK_PUBLIC_DNS=localhost
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./data:/tmp/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080 | grep -q 'Spark Master' || exit 0"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  spark-worker:
+    image: bitnami/spark:3.4
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES:-2}
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-2g}
+      - SPARK_PUBLIC_DNS=localhost
+    volumes:
+      - ./data:/tmp/data
+    depends_on:
+      - spark-master
+    networks:
+      - app-network
+    deploy:
+      replicas: 2
+
+volumes:
+  postgres-data:
+  data:
+
+networks:
+  app-network:
+    driver: bridge
+    attachable: true
