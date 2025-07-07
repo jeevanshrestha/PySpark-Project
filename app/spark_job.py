@@ -1,64 +1,47 @@
 import os
-import logging
+import sys
 from pyspark.sql import SparkSession
 
-# Configure logging with more detailed format
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+def log_environment():
+    print("\n=== ENVIRONMENT ===")
+    print(f"Python: {sys.executable}")
+    print(f"Version: {sys.version}")
+    print(f"PATH: {os.getenv('PATH')}")
+    print(f"PYSPARK_PYTHON: {os.getenv('PYSPARK_PYTHON')}")
+    print(f"PYSPARK_DRIVER_PYTHON: {os.getenv('PYSPARK_DRIVER_PYTHON')}\n")
 
-def create_spark_session():
-    spark_mode = os.getenv("SPARK_MODE", "local")
+def main():
+    # log_environment()
     
-    builder = SparkSession.builder \
-        .appName("DevContainerDemo") \
-        .config("spark.ui.port", "4040") \
-        .config("spark.sql.shuffle.partitions", "4") \
-        .config("spark.executor.memory", "2g") \
-        .config("spark.driver.memory", "1g")
+    spark = (
+        SparkSession.builder
+        .appName("FixedSparkJob")
+        .config("spark.sql.execution.pyspark.udf.faulthandler.enabled", "true")
+        .config("spark.python.worker.faulthandler.enabled", "true")
+        .config("spark.driver.memory", "2g")
+        .config("spark.executor.memory", "2g")
+        .config("spark.python.worker.reuse", "false")
+        .getOrCreate()
+    )
 
-    if spark_mode == "cluster":
-        builder = builder.master("spark://spark-master:7077")
-        logger.info("Running in cluster mode")
-    else:
-        builder = builder.master("local[*]")
-        logger.info("Running in local mode")
-
-    return builder.getOrCreate()
-
-def run_spark_job():
-    spark = None
     try:
-        spark = create_spark_session()
+        # Simple test that doesn't require worker communication
+        print("\nTesting SparkContext...")
+        print(f"Spark version: {spark.version}")
+        print(f"Spark UI: {spark.sparkContext.uiWebUrl}")
         
-        # Sample data processing
-        data = [("Python", 1), ("Spark", 2), ("FastAPI", 3)]
-        df = spark.createDataFrame(data, ["library", "rating"])
-        
-        logger.info("Original Data:")
+        # Test with simple local data
+        data = [("Test", 1), ("Spark", 2)]
+        df = spark.createDataFrame(data, ["text", "value"])
         df.show()
         
-        transformed_df = df.withColumn("rating_boost", df["rating"] * 10)
-        
-        logger.info("Transformed Data:")
-        transformed_df.show()
-        
-        return transformed_df.collect()
+        print("\nSpark test completed successfully!")
         
     except Exception as e:
-        logger.error(f"Error in Spark job: {str(e)}")
+        print(f"\nERROR: {str(e)}", file=sys.stderr)
         raise
     finally:
-        if spark:
-            spark.stop()
-            logger.info("Spark session stopped")
+        spark.stop()
 
 if __name__ == "__main__":
-    logger.info("Starting Spark job...")
-    results = run_spark_job()
-    logger.info("Job results:")
-    for row in results:
-        logger.info(row)
+    main()

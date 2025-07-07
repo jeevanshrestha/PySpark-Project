@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from . import database
-from .config import settings
+from app import database
+from  app.config  import settings
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,6 +31,6 @@ def sample_data():
 
 @app.get("/db-test")
 def db_test(db: Session = Depends(get_db)):
-    result = db.execute("SELECT version();")
+    result = db.execute("SELECT version();") # type: ignore
     version = result.fetchone()[0]
     return {"postgres_version": version}

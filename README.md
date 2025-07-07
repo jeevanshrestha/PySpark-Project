@@ -8,6 +8,33 @@ Python Dev Container with:
 - FastAPI
 - PostgreSQL
 
+## Installation
+
+### 1. Python Environment Setup
+```powershell
+# Create virtual environment
+py -3.10 -m venv .venv
+
+# Activate environment
+.\.venv\Scripts\activate
+
+# Install dependencies
+pip install pyspark==3.5.0 py4j==0.10.9.7
+
+
+
+# Ensure Python is in PATH correctly
+```powershell
+# Add virtual environment's Scripts to PATH
+$env:PATH = "$pwd\.venv\Scripts;" + $env:PATH
+
+# Set PySpark environment variables before running scripts
+$env:PYSPARK_PYTHON = "$pwd\.venv\Scripts\python.exe"
+$env:PYSPARK_DRIVER_PYTHON = "$pwd\.venv\Scripts\python.exe"
+$env:SPARK_LOCAL_IP = "127.0.0.1"
+```
+
+
 ## Setup
 1. Open in VS Code
 2. Install "Dev Containers" extension
